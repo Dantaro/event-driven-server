@@ -1,0 +1,91 @@
+<html>
+<head>
+  <script>
+    const Publisher = (function(obj) {
+      const subscriptions = {}
+      
+      obj.subscribe = (event, callback) => {
+          if (!subscriptions[event]) {
+              subscriptions[event] = {}
+          }
+          const symbol = Symbol()
+          subscriptions[event][symbol] = (payload) => {
+            console.log("Callback")
+            callback(payload)
+            delete subscriptions[event]
+          }
+          console.log('In subscribe')
+          console.log(subscriptions)
+          return () => delete subscriptions[event]
+      }
+      
+      obj.publish = (event, payload) => {
+          console.log(event)
+          console.log(subscriptions)
+          const holder = subscriptions[event]
+          if (holder) {
+              Object.getOwnPropertySymbols(holder)
+                  .forEach(key => holder[key](payload))
+          }
+      }
+
+      return obj
+    })({})
+
+  let userId = undefined
+
+  if (!!window.EventSource) {
+    const source = new EventSource('http://localhost:3000/register')
+
+    source.addEventListener('message', function(e) {
+      console.log('onMessage')
+      if (!userId) {
+        console.log('no user id')
+        document.getElementById('data').innerHTML = e.data + " " + e.lastEventId
+        userId = JSON.parse(e.data).userId
+      } else {
+        console.log('userId')
+        console.log(`Event ID: ${e.lastEventId}`)
+        Publisher.publish(e.lastEventId, e.data)
+      }
+    }, false)
+
+    source.addEventListener('open', function(e) {
+      document.getElementById('state').innerHTML = "Connected"
+    }, false)
+
+    source.addEventListener('error', function(e) {
+      const id_state = document.getElementById('state')
+      if (e.eventPhase == EventSource.CLOSED)
+        source.close()
+      if (e.target.readyState == EventSource.CLOSED) {
+        id_state.innerHTML = "Disconnected"
+      }
+      else if (e.target.readyState == EventSource.CONNECTING) {
+        id_state.innerHTML = "Connecting..."
+      }
+    }, false)
+  } else {
+    console.log("Your browser doesn't support SSE")
+  }
+
+  function add() {
+    if (userId) {
+      fetch(`/math/add?userId=${userId}&number1=10&number2=10`)
+      .then((res) => res.text())
+      .then(text => {
+        console.log(`Returned id: ${text}`)
+        Publisher.subscribe(text, data => {
+          document.getElementById('data').innerHTML = data
+        })
+      })
+    }
+  }
+  </script>
+</head>
+<body>
+  <h1>SSE: <span id="state"></span></h1>
+  <h3>Data: <span id="data"></span></h3>
+  <button onclick="add()">Add 10 and 10</button>
+</body>
+</html>
