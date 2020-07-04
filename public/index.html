@@ -10,18 +10,13 @@
           }
           const symbol = Symbol()
           subscriptions[event][symbol] = (payload) => {
-            console.log("Callback")
             callback(payload)
             delete subscriptions[event]
           }
-          console.log('In subscribe')
-          console.log(subscriptions)
           return () => delete subscriptions[event]
       }
       
       obj.publish = (event, payload) => {
-          console.log(event)
-          console.log(subscriptions)
           const holder = subscriptions[event]
           if (holder) {
               Object.getOwnPropertySymbols(holder)
@@ -38,14 +33,10 @@
     const source = new EventSource('http://localhost:3000/register')
 
     source.addEventListener('message', function(e) {
-      console.log('onMessage')
       if (!userId) {
-        console.log('no user id')
         document.getElementById('data').innerHTML = e.data + " " + e.lastEventId
         userId = JSON.parse(e.data).userId
       } else {
-        console.log('userId')
-        console.log(`Event ID: ${e.lastEventId}`)
         Publisher.publish(e.lastEventId, e.data)
       }
     }, false)
@@ -74,7 +65,6 @@
       fetch(`/math/add?userId=${userId}&number1=10&number2=10`)
       .then((res) => res.text())
       .then(text => {
-        console.log(`Returned id: ${text}`)
         Publisher.subscribe(text, data => {
           document.getElementById('data').innerHTML = data
         })

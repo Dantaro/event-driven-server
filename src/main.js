@@ -37,7 +37,6 @@ app.get('/math/add', (req, res) => {
             +req.query.number2
         )
     })
-    console.log("writing eventid to response")
     res.write(eventId)
     res.end()
 })
